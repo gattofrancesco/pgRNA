@@ -1,0 +1,102 @@
+---
+title: "Identify promiscuous gRNAs in S. cerevisiae genome"
+author: "Francesco Gatto"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+params:
+# Define args
+  run_directory: .
+  nmismatches : 0
+  chunk       : 1
+  nchunks     : 1
+  region      : "coding"
+  toprank     : 10
+  maxgRNA     : 200000
+  interimdir  : "interim/"
+  minGC       : 0.1
+  selgenes    : 'YOR317W,YER015W,YIL009W,YMR246W,YMR008C,YMR006C,YOL011W'
+  genome      : "sacCer3"
+---
+  
+This workflow extracts gRNAs from the coding region of 7 genes in S. cerevisiae genome and retrieves promiscuous gRNAs with no mismatches. No parallelization is called (chunk = 1, nchunks = 1). The top 10 promiscuous gRNAs are returned.
+
+
+#Define parameters
+The following parameters were used to identify promiscuous gRNAs:
+```{r dataparams, echo = F,message=FALSE,warning=FALSE}
+library(knitr)
+param.df <- data.frame(Parameter=names(unlist(params)),Value=unlist(params),Description=c("Working directory","Max n of mismatches","Current chunk #","Total n of chunks","Region that gRNAs target","Number of top promiscuous gRNAs returned","Maximum number of hits per promiscuous gRNA","Directory of interim files","Minimum GC content (fraction) in extracted gRNAs","Selected genes in genome (all if NULL)", "Loaded genome"))
+kable(param.df,row.names = F)
+prefix <- paste0(params$genome,params$region,gsub(",","&",params$selgenes))
+```
+
+#Retrieve regions
+The first step loads a genome sequence and then extracts the locations of either the promoter region (500 bp upstream to 0 bp downstream) or the coding sequence (0 bp upstream to length of ORF downstream) for each gene in the genome. Subsequently, the genetic sequence for each so-located target regions are extracted. This step was implemented for the genome of S. cerevisiae. Different genomes must be implemented by changing the source file.
+
+```{r retrievereg, echo = T,message=TRUE,warning=FALSE}
+source("src/retrieveregionseq.R")
+res <- retrieveregionseq(region   = params$region,
+                         genome   = params$genome,
+                         selgenes = params$selgenes,
+                         filename = paste0("res/",prefix,"seq.rda"))
+regions <- res[["regions"]]
+genes   <- res[["genes"]]
+```
+
+#Extract gRNAs
+The second step locates all PAM sequences in each target region and extracts a 20 bp gRNA upstream. gRNAs with a GC content (in %) lower than a user-defined value (default: 10%) are filtered out.
+
+```{r extractgRNA, echo = T,message=TRUE,warning=FALSE}
+source("src/retrievegRNAseq.R")
+gRNAs.ext <- retrievegRNAseq(regions,genes,
+                             minGC= params$minGC,
+                             filename= paste0("res/gRNA2",prefix,"seq_minGC",params$minGC,".rda"))
+```
+
+#Align gRNAs to regions
+The third step aligns all extracted gRNAs to all target regions. Each gRNA is aligned to each target region genetic sequence and its complement and a match is found (hit) if the alignment between sequences contained less than the user-defined maximum number of mismatches (default: 0 a.k.a. exact match). The number of hits per target region is recorded as the sum of hits in the cis and in the trans strand. This step returns a r x g matrix where r is the number of target regions and g is the number of gRNAs and each entry is the number of hits of a certain gRNA in the cis or trans sequence of a certain target region. Note that in principle the same gRNA may match the sequence of target region of the same gene more than once, so the upper bound of each entry is greater than 1. The process can be parallelized by splitting the output matrix into n chunks corresponding to the number of cores so that in each core g/n gRNAs are aligned to the target regions. Given that g can be fairly high (> 100,000), the resulting matrix may reach a considerable size. The results are saced in the interim folder.
+
+```{r aligngRNAtoregion, echo = T,message=TRUE,warning=FALSE}
+source("src/aligngRNAtoregions.R")
+hitsindexes <- aligngRNAtoregions(gRNAs.ext,regions,
+                                    nmismatches = params$nmismatches,
+                                    nchunks     = params$nchunks,
+                                    chunk       = params$chunk)
+
+#Save
+save(list=c("gRNAs.ext","hitsindexes","regions","genes"), 
+     file = paste0(params$interimdir,"gRNAs2",prefix,"hitlist_nmismatch",params$nmismatches,".rda"))
+```
+
+#Analyse alignments 
+The fourth and last step analyzes the hits and returns the top gRNAs. Plots with the distribution of frequency and density of number of hits and a table with the top n promiscuous gRNAs sorted by number of hits is returned (n is user-defined, 100 by default). Before the analysis, the user can filter out target regions for which promiscuity is not desired and set the maximum number of hits per gRNA (default: 200,000). Finally, the top n gRNAs are aligned back to target regions and the corresponding genes are recorded in a table. 
+
+```{r analyzehits, echo = F,message=TRUE,warning=FALSE}
+if (!exists("hitsindexes")){
+  source("src/lumphitsindexes.R")
+  if (!any(grepl("hitlist",dir(interimdir)) & 
+           grepl(paste0("nmismatch_",nmismatches),dir(interimdir)) &
+           grepl(region,dir(interimdir)))){
+    message("No hitlist for region with selected mismatches found in directory: ", interimdir,". Skipping...")
+  } else {
+    hitsindexes <- lumphitsindexes(interimdir,region,nmismatches)
+  }
+}
+
+source("src/getannotatedgenes.R")
+tokeepgenes <- getannotatedgenes("data/geneinfo.txt",
+                                 noputative=T,
+                                 onlymetabolic=F)
+
+source("src/analyzealignments.R")
+analyzealignments(hitsindexes,
+                  regions    =regions,
+                  genes      =genes,
+                  region     =params$region,
+                  nmismatches=params$nmismatches,
+                  toprank    =params$toprank,
+                  maxgRNA    =params$maxgRNA,
+                  selgenes   =tokeepgenes,
+                  filename   =paste0("res/top",toprank,"gRNA_hitlistin",prefix,"_nmismatches",nmismatches,
+                       ifelse(!is.null(tokeepgenes),"_annotatedonly.csv",".csv"))
+                  )
+```
