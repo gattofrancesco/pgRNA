@@ -14,11 +14,11 @@ minGC       = 0.1
 selgenes    = 'YOR317W,YER015W,YIL009W,YMR246W,YMR008C,YMR006C,YOL011W'
 genome      = "sacCer3"
 
-# # Read args from command line
-# args=(commandArgs(TRUE)) #
-# for(i in 1:length(args)){
-#   eval(parse(text=args[[i]]))
-# }
+# Read args from command line
+args=(commandArgs(TRUE)) #
+for(i in 1:length(args)){
+  eval(parse(text=args[[i]]))
+}
 
 #Launch RMarkdown script
 library(rmarkdown)
