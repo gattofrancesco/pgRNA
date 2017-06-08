@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
 rm(list=ls())
+install.packages("packrat")
 library(packrat)
 
 # Define default args

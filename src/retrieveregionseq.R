@@ -14,7 +14,6 @@ retrieveregionseq <- function(genome="sacCer3",
   
   #Params
   region   <- match.arg(region)
-  genome   <- match.arg(genome)
   
   #Load correct genome
   suppressMessages(library(GenomicFeatures))
