@@ -38,7 +38,7 @@ The R Markdown script can be called with user-defined arguments from command lin
 
 > R CMD BATCH --no-save --no-restore '--args nmismatches=1' main.R log.out
 
-All dependent R libraries will be installed automatically using packrat.
+All dependent R libraries will be installed automatically using packrat (https://rstudio.github.io/packrat/).
 This will produce a html report called main.html. Interim and final results will be saved in default folders unless
 otherwise specified. Additional arguments can be specified in the command above. See below for parameters' description.
 
