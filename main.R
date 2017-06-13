@@ -2,7 +2,7 @@
 rm(list=ls())
 
 #Install Rmarkdown
-install.packages("rmarkdown")
+install.packages("rmarkdown",dependencies = T)
 library(rmarkdown)
 
 # Define default args
