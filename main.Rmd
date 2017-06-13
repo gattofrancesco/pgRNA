@@ -8,13 +8,13 @@ params:
   nmismatches : 0
   chunk       : 1
   nchunks     : 1
-  region      : "coding"
+  region      : "chromosome"
   toprank     : 10
   maxgRNA     : 200000
   interimdir  : "interim/"
   minGC       : 0.1
   selgenes    : NULL
-  genome      : "hg19"
+  genome      : "sacCer3"
 ---
   
 This workflow extracts gRNAs from the coding region of 7 genes in S. cerevisiae genome and retrieves promiscuous gRNAs with no mismatches. No parallelization is called (chunk = 1, nchunks = 1). The top 10 promiscuous gRNAs are returned.
@@ -25,7 +25,8 @@ The following parameters were used to identify promiscuous gRNAs:
 ```{r dataparams, echo = F,message=FALSE,warning=FALSE}
 library(knitr)
 param.desc <- c("Working directory","Max n of mismatches","Current chunk #","Total n of chunks","Region that gRNAs target","Number of top promiscuous gRNAs returned","Maximum number of hits per promiscuous gRNA","Directory of interim files","Minimum GC content (fraction) in extracted gRNAs","Selected genes in genome (all if NULL)", "Loaded genome")
-param.df  <- data.frame(Parameter=names(unlist(params)),Value=unlist(params),Description=ifelse("selgenes"%in%names(params),param.desc,param.desc[-10]))
+if (!"selgenes"%in%names(params)) param.desc <- param.desc[-10]
+param.df  <- data.frame(Parameter=names(unlist(params)),Value=unlist(params),Description=param.desc)
 kable(param.df,row.names = F)
 prefix <- paste0(params$genome,params$region,gsub(",","&",params$selgenes))
 dir.create("res/",showWarnings = F)

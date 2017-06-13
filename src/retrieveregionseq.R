@@ -1,5 +1,5 @@
 retrieveregionseq <- function(genome="sacCer3",
-                              region=c("promoter","coding"),
+                              region=c("promoter","coding","chromosome"),
                               selgenes=NULL, #List of gene to filter from genome
                               filename=NULL){
   
@@ -54,36 +54,42 @@ retrieveregionseq <- function(genome="sacCer3",
   }
   sgd.genes.u   <- sgd.genes[!duplicated(sgd.genes)]
   
-  #Define region
-  if (region=="promoter"){
-    upstream   <- 500
-    downstream <- rep(0,length(sgd.genes))
+  #Define region (unless "chromosome")
+  if (region!="chromosome"){
+    if (region=="promoter"){
+      upstream   <- 500
+      downstream <- rep(0,length(sgd.genes))
+        names(downstream) <- sgd.genes
+    } else if (region == "coding"){
+      upstream   <- 0
+      downstream <- sgd.genome[,3]-sgd.genome[,2]
       names(downstream) <- sgd.genes
-  } else if (region == "coding"){
-    upstream   <- 0
-    downstream <- sgd.genome[,3]-sgd.genome[,2]
-    names(downstream) <- sgd.genes
-  }
-  message("Extracting sequences from: ",region," region - Upstream: ",upstream, " Downstream (median): ",median(downstream))
-
-  #Fetch target region sequence
-  fetchregionseq <- function(gene,upstream,downstream,txdb,bsgenome){
-    chromosomal.loc <- transcriptsBy(txdb, by="gene") [gene]
-    regionseq     <- NA
-    tryCatch({
-      regionseq <- getPromoterSeq(chromosomal.loc, bsgenome, 
-                                    upstream=upstream, 
-                                    downstream=downstream[gene])
-      },
-      error=function(e){}
-      )
-    regionseq.ch  <- as.character(regionseq[[1]])[[1]]
-    regionseq.ch
-  }
+    }
+    message("Extracting sequences from: ",region," region - Upstream: ",upstream, " Downstream (median): ",median(downstream))
   
-  #Apply to each gene
-  message("Fetching region seq for ",length(sgd.genes.u)," genes...")
-  regions.all <- sapply(sgd.genes.u, fetchregionseq,upstream,downstream,txdb,bsgenome)
+    #Fetch target region sequence
+    fetchregionseq <- function(gene,upstream,downstream,txdb,bsgenome){
+      chromosomal.loc <- transcriptsBy(txdb, by="gene") [gene]
+      regionseq     <- NA
+      tryCatch({
+        regionseq <- getPromoterSeq(chromosomal.loc, bsgenome, 
+                                      upstream=upstream, 
+                                      downstream=downstream[gene])
+        },
+        error=function(e){}
+        )
+      regionseq.ch  <- as.character(regionseq[[1]])[[1]]
+      regionseq.ch
+    }
+
+  #Apply to each gene or chromosome
+    message("Fetching region seq for ",length(sgd.genes.u)," genes...")
+    regions.all <- sapply(sgd.genes.u, fetchregionseq,upstream,downstream,txdb,bsgenome)
+  } else {
+    chrs <- seqnames(bsgenome)
+    message("Fetching region seq for ",length(chrs)," chromosomes...")
+    regions.all <- sapply(chrs,function(x){as.character(bsgenome[[x]])})
+  }  
   
   #Filter out duplicates or null seqs
   filter    <- intersect(which(!duplicated(regions.all)),which(!is.na(regions.all)))
