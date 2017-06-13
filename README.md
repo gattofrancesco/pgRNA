@@ -27,18 +27,18 @@ Besides RMarkdown, the following R libraries must be installed:
 * BiocGenerics_0.22.0                        
 * knitr_1.16   
 
-## Running the workflow from an R environment (Recommended)
+## Running the workflow from an R environment (R library-dependent)
 An example workflow can be directly run by sourcing main.Rmd in an R environment e.g. RStudio. 
 Note that this requires a working installation of R Markdown and that dependent R libraries
 are installed within the R enrivonment (e.g. RStudio). The user can change the default parameters
 by editing the values at the beginning of the R Markdown document. See below for parameters' description.
 
-## Running the workflow from command line
+## Running the workflow from command line (R library-independent)
 The R Markdown script can be called with user-defined arguments from command line by calling main.R:
 
 > R CMD BATCH --no-save --no-restore '--args nmismatches=1' main.R log.out
 
-All dependent R libraries must be installed in the current R installation.
+All dependent R libraries will be installed automatically using packrat.
 This will produce a html report called main.html. Interim and final results will be saved in default folders unless
 otherwise specified. Additional arguments can be specified in the command above. See below for parameters' description.
 
