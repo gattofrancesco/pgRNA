@@ -1,6 +1,10 @@
 #!/usr/bin/env Rscript
 rm(list=ls())
 
+#Install Rmarkdown
+install.packages("rmarkdown")
+library(rmarkdown)
+
 # Define default args
 nmismatches = 0
 chunk       = 1
