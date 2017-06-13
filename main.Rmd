@@ -8,12 +8,12 @@ params:
   nmismatches : 0
   chunk       : 1
   nchunks     : 1
-  region      : "chromosome"
+  region      : "coding"
   toprank     : 10
   maxgRNA     : 200000
   interimdir  : "interim/"
   minGC       : 0.1
-  selgenes    : NULL
+  selgenes    : 'YOR317W,YER015W,YIL009W,YMR246W,YMR008C,YMR006C,YOL011W'
   genome      : "sacCer3"
 ---
   
