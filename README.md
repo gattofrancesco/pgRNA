@@ -56,7 +56,7 @@ extracted and then aligned back. (Default: "coding")
 *  interimdir  : character. Path to directory where interim files are stored (Default: "interim/")
 *  minGC       : float. Minimum fraction of GC content in extracted gRNA (Default: 0.1)
 *  selgenes    : comma-separated characters. List of gene names where gRNAs are extracted and aligned back. Must 
-overlap with list of genes in the loaded genome. If NULL, uses all genes in genome. (Default: 'YOR317W,YER015W,YIL009W,YMR246W,YMR008C,YMR006C,YOL011W').
+overlap with list of genes in the loaded genome. If NULL, uses all genes in genome. Ignored if region is "chromosome". (Default: 'YOR317W,YER015W,YIL009W,YMR246W,YMR008C,YMR006C,YOL011W').
 *  genome      : character. Genome to be loaded. Must match abbreviations for makeTxDbFromUCSC function in R library 
 GenomicFeatures 1.24.5. (Default: "sacCer3").
 
