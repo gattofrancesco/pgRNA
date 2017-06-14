@@ -1,5 +1,5 @@
 analyzealignments <- function(hitsindexes,region,nmismatches,regions=NULL,genes=NULL,regfile=NULL,
-                              toprank=100,maxgRNA=2*10^5,selgenes=NULL,filename=NULL){
+                              toprank=100,maxgRNA=2*10^5,selgenes=NULL,csvfilename=NULL){
   suppressMessages(library(ggplot2))
   suppressMessages(library(reshape2))
   suppressMessages(library(seqinr))
@@ -25,8 +25,10 @@ analyzealignments <- function(hitsindexes,region,nmismatches,regions=NULL,genes=
       genes <- genes[ind2keep]
       regions <- regions[genes]
     }
+    nhitspergRNA <- colSums(hits!=0) #No-null entry mean that gRNA aligned to gene region
+  } else {
+    nhitspergRNA <- colSums(hits) #No-null entry mean frequency of gRNA aligned to chromosome
   }
-  nhitspergRNA <- colSums(hits!=0)
   
   #Plot 1: n hits per gRNA
   m <- melt(nhitspergRNA)
@@ -74,18 +76,33 @@ analyzealignments <- function(hitsindexes,region,nmismatches,regions=NULL,genes=
     
     for (gRNA in TOPgRNA){
       print(paste("Doing...",gRNA))
-      scores       <- scoreAlignment(gRNA,regions)
+      scores.cis   <- scoreAlignment(gRNA,regions)
+      gRNA.comp    <- as.character(reverseComplement(DNAStringSet(gRNA)))
+      scores.trans <- scoreAlignment(gRNA.comp,regions)
+        names(scores.trans) <- paste(names(scores.trans),"rev",sep="_")
+      scores       <- c(scores.cis,scores.trans)
       nhitsxregion <- sapply(scores,function(x) length(start(x)))
       nhitsxregion <- as.matrix(nhitsxregion)
-      posiz <- which(nhitsxregion != 0)
-      posiz <- as.matrix(posiz)
-      best.tab[gRNA,1:length(posiz)] <- genes[posiz]
+      if (region != "chromosome"){
+        posiz <- which(nhitsxregion != 0)
+        posiz <- as.matrix(posiz)
+        best.tab[gRNA,1:length(posiz)] <- genes[posiz]
+      } else {
+        posiz  <- sum(nhitsxregion)
+        starts <- unlist(lapply(scores,start))
+        values <- c()
+        for (i in 1:length(starts)){
+          v<-paste(names(starts[i]),starts[i],sep = ":")
+          values <- c(values,v)
+          }
+        best.tab[gRNA,1:posiz] <- values
+      }
     }
   }
   
-  if (is.null(filename)){
-    filename   <- paste0("res/top",toprank,"gRNA_hitlistin",region,"_nmismatches",nmismatches,
+  if (is.null(csvfilename)){
+    csvfilename   <- paste0("res/top",toprank,"gRNA_hitlistin",region,"_nmismatches",nmismatches,
                        ifelse(!is.null(selgenes),"_annotatedonly.csv",".csv"))
   }
-  write.csv(best.tab, filename)
+  write.csv(best.tab, csvfilename)
   }

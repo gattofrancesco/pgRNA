@@ -63,7 +63,7 @@ The third step aligns all extracted gRNAs to all target regions. Each gRNA is al
 source("src/aligngRNAtoregions.R")
 hitsindexes <- aligngRNAtoregions(gRNAs.ext,regions,
                                   nmismatches = params$nmismatches,
-                                  chunks     = params$nchunks,
+                                  nchunks     = params$nchunks,
                                   chunk       = params$chunk)
 
 #Save
@@ -89,7 +89,7 @@ if (!exists("hitsindexes")){
 
 # Filter genes interesting to target with promiscous gRNAs.Ignored if region = "chromosome"
 source("src/getannotatedgenes.R")
-if (region!="chromosome"){
+if (params$region!="chromosome"){
   tokeepgenes <- getannotatedgenes("data/geneinfo.txt",
                                    noputative=T,
                                    onlymetabolic=F)
@@ -107,6 +107,6 @@ analyzealignments(hitsindexes,
                   toprank    =params$toprank,
                   maxgRNA    =params$maxgRNA,
                   selgenes   =tokeepgenes,
-                  filename   =NULL
+                  csvfilename=NULL
                   )
 ```
