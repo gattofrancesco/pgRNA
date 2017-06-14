@@ -43,7 +43,7 @@ res <- retrieveregionseq(region   = params$region,
                          selgenes = params$selgenes,
                          filename = paste0("res/",prefix,"seq.rda"))
 regions <- res[["regions"]]
-genes   <- res[["genes"]] #Ignored if region="chromosome"
+genes   <- res[["genes"]]
 ```
 
 #Extract gRNAs
