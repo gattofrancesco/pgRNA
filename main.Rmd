@@ -8,17 +8,16 @@ params:
   nmismatches : 0
   chunk       : 1
   nchunks     : 1
-  region      : "coding"
+  region      : "chromosome"
   toprank     : 10
   maxgRNA     : 200000
   interimdir  : "interim/"
   minGC       : 0.1
-  selgenes    : 'YOR317W,YER015W,YIL009W,YMR246W,YMR008C,YMR006C,YOL011W'
+  selgenes    : NULL
   genome      : "sacCer3"
 ---
   
-This workflow extracts gRNAs from the coding region of 7 genes in S. cerevisiae genome and retrieves promiscuous gRNAs with no mismatches. No parallelization is called (chunk = 1, nchunks = 1). The top 10 promiscuous gRNAs are returned.
-
+This workflow example extracts gRNAs from the coding region of 7 genes in S. cerevisiae genome and retrieves promiscuous gRNAs with no mismatches. No parallelization is called (chunk = 1, nchunks = 1). The top 10 promiscuous gRNAs are returned.
 
 #Define parameters
 The following parameters were used to identify promiscuous gRNAs:
@@ -44,7 +43,7 @@ res <- retrieveregionseq(region   = params$region,
                          selgenes = params$selgenes,
                          filename = paste0("res/",prefix,"seq.rda"))
 regions <- res[["regions"]]
-genes   <- res[["genes"]]
+genes   <- res[["genes"]] #Ignored if region="chromosome"
 ```
 
 #Extract gRNAs
@@ -63,9 +62,9 @@ The third step aligns all extracted gRNAs to all target regions. Each gRNA is al
 ```{r aligngRNAtoregion, echo = T,message=TRUE,warning=FALSE}
 source("src/aligngRNAtoregions.R")
 hitsindexes <- aligngRNAtoregions(gRNAs.ext,regions,
-                                    nmismatches = params$nmismatches,
-                                    nchunks     = params$nchunks,
-                                    chunk       = params$chunk)
+                                  nmismatches = params$nmismatches,
+                                  chunks     = params$nchunks,
+                                  chunk       = params$chunk)
 
 #Save
 save(list=c("gRNAs.ext","hitsindexes","regions","genes"), 
@@ -76,22 +75,29 @@ save(list=c("gRNAs.ext","hitsindexes","regions","genes"),
 The fourth and last step analyzes the hits and returns the top gRNAs. Plots with the distribution of frequency and density of number of hits and a table with the top n promiscuous gRNAs sorted by number of hits is returned (n is user-defined, 100 by default). Before the analysis, the user can filter out target regions for which promiscuity is not desired and set the maximum number of hits per gRNA (default: 200,000). Finally, the top n gRNAs are aligned back to target regions and the corresponding genes are recorded in a table. 
 
 ```{r analyzehits, echo = F,message=TRUE,warning=FALSE}
-if (!exists("hitsindexes")){
+# Collect hitlist data if split into chunks (nchunks > 1)
+if (!exists("hitsindexes")){ 
   source("src/lumphitsindexes.R")
-  if (!any(grepl("hitlist",dir(interimdir)) & 
-           grepl(paste0("nmismatch_",nmismatches),dir(interimdir)) &
-           grepl(region,dir(interimdir)))){
-    message("No hitlist for region with selected mismatches found in directory: ", interimdir,". Skipping...")
+  if (!any(grepl("hitlist",dir(params$interimdir)) & 
+           grepl(paste0("nmismatch_",params$nmismatches),dir(params$interimdir)) &
+           grepl(params$region,dir(params$interimdir)))){
+    message("No hitlist for region with selected mismatches found in directory: ", params$interimdir,". Skipping...")
   } else {
-    hitsindexes <- lumphitsindexes(interimdir,region,nmismatches)
+    hitsindexes <- lumphitsindexes(params$interimdir,params$region,params$nmismatches)
   }
 }
 
+# Filter genes interesting to target with promiscous gRNAs.Ignored if region = "chromosome"
 source("src/getannotatedgenes.R")
-tokeepgenes <- getannotatedgenes("data/geneinfo.txt",
-                                 noputative=T,
-                                 onlymetabolic=F)
+if (region!="chromosome"){
+  tokeepgenes <- getannotatedgenes("data/geneinfo.txt",
+                                   noputative=T,
+                                   onlymetabolic=F)
+} else {
+  tokeepgenes <- NULL
+}
 
+# Analyze distribution and target region of top promiscous gRNAs
 source("src/analyzealignments.R")
 analyzealignments(hitsindexes,
                   regions    =regions,
@@ -101,7 +107,6 @@ analyzealignments(hitsindexes,
                   toprank    =params$toprank,
                   maxgRNA    =params$maxgRNA,
                   selgenes   =tokeepgenes,
-                  filename   =paste0("res/top",toprank,"gRNA_hitlistin",prefix,"_nmismatches",nmismatches,
-                       ifelse(!is.null(tokeepgenes),"_annotatedonly.csv",".csv"))
+                  filename   =NULL
                   )
 ```

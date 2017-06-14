@@ -17,12 +17,14 @@ analyzealignments <- function(hitsindexes,region,nmismatches,regions=NULL,genes=
   
   #Preprocess results
   hits         <- hitsindexes
-  if (!is.null(selgenes)){
-    ind2keep <- match(selgenes,genes)[!is.na(match(selgenes,genes))]
-    message(length(ind2keep)," genes in target sequences were retained")
-    hits  <- hits[ind2keep,]
-    genes <- genes[ind2keep]
-    regions <- regions[genes]
+  if (region != "chromosome"){
+    if (!is.null(selgenes)){
+      ind2keep <- match(selgenes,genes)[!is.na(match(selgenes,genes))]
+      message(length(ind2keep)," genes in target sequences were retained")
+      hits  <- hits[ind2keep,]
+      genes <- genes[ind2keep]
+      regions <- regions[genes]
+    }
   }
   nhitspergRNA <- colSums(hits!=0)
   
@@ -72,7 +74,7 @@ analyzealignments <- function(hitsindexes,region,nmismatches,regions=NULL,genes=
     
     for (gRNA in TOPgRNA){
       print(paste("Doing...",gRNA))
-      scores         <- scoreAlignment(gRNA,regions)
+      scores       <- scoreAlignment(gRNA,regions)
       nhitsxregion <- sapply(scores,function(x) length(start(x)))
       nhitsxregion <- as.matrix(nhitsxregion)
       posiz <- which(nhitsxregion != 0)
