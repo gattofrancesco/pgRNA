@@ -24,64 +24,54 @@ retrievegRNAseq <- function(regions=NULL,genes=NULL,regfile=NULL,
   }
   
   ## Find gRNA
-  gRNA.pattern <- ""
-  starts.gRNA  <- ""
-  ends.gRNA    <- ""
-  gRNA.tab     <- ""
-  gRNAs.ext    <- c()
-  extSeq.4     <- ""
-  seqleft      <- length(regions)
+  r   <- DNAStringSet(regions)
   
-  #No idea what the inner loop does - rename variable and comment
-  for (region in regions){
-    PAM = "GG"
-    seq.len  <- nchar(region)
-    #Search position of PAM
-    pos.PAMs <- unlist(gregexpr(PAM, region, perl = TRUE,
-                                ignore.case = TRUE, fixed = FALSE)) -1
-    #Remove less than 20 nucleotides PAM pos.
-    pos.PAMs <- pos.PAMs[pos.PAMs != -1 & pos.PAMs > gRNA.size]  
-    #Start and end of gRNAs
-    starts.gRNA <- pos.PAMs - gRNA.size 
-    ends.gRNA   <- starts.gRNA + gRNA.size - 1
-    seq       <- as.character(Views(region,
-                              start = starts.gRNA,
-                              end = ends.gRNA))
-    extSeq    <- as.character(Views(region,
-                                 start = starts.gRNA ,
-                                 end = ends.gRNA + PAM.size))
-    gRNAs.ext <- c(gRNAs.ext,extSeq)
-    PAM3="CC"
-    pos.PAMs.3 <- unlist(gregexpr(PAM3, region, perl = TRUE, 
-                                  ignore.case = TRUE, fixed = FALSE)) +1
-    pos.PAMs.3 <- pos.PAMs.3[pos.PAMs.3 != -1 & pos.PAMs.3 > gRNA.size & pos.PAMs.3 < seq.len - 20] #Hard-coded?
-    starts.gRNA.3 <- pos.PAMs.3 + 2
-    ends.gRNA.3 <- (starts.gRNA.3 + gRNA.size - 1)
-    seq.3   <- as.character(Views(region, 
-                                start = starts.gRNA.3,
-                                end = ends.gRNA.3))
-    extSeq.3 <- as.character(Views(region,
-                                   start = starts.gRNA.3 - PAM.size ,
-                                   end = ends.gRNA.3 ))
-    if (length(extSeq.3 > 0)){
-      
-      for (k in 1:length(extSeq.3)){ 
-        mattt = ""
-        tmpp =""
-        tmpp <- DNAString(extSeq.3[k])
-        tmpp <- reverseComplement(tmpp)
-        tmmp <- as.character(tmpp)
-        mattt[1] <- tmmp
-        extSeq.4 <- c(extSeq.4,mattt[1])
-        
-      }
-      extSeq.4 <- extSeq.4[-1]
-      gRNAs.ext <- c(gRNAs.ext,extSeq.4)
-    }
-    extSeq.4=""
-    seqleft <- seqleft - 1
-    message(seqleft," sequences remaining...")
+  #Forward strand
+  PAM <- DNAString("GG") #Protospacer Adjacent Motif 3 nucleotides
+  
+  #Search position of PAM in each region
+  pos.PAMs <- vmatchPattern(PAM,r,
+                algorithm="auto",max.mismatch=0,
+                with.indels=FALSE, fixed=TRUE)
+  
+  #Filter out PAM sequence if located at <20bp from the first nucleotide
+  pos.PAMs.f <- lapply(pos.PAMs,function(x){y <- x[start(x) != -1 & start(x) > gRNA.size]})
+  
+  #Define gRNAs region
+  starts.gRNA <- lapply(pos.PAMs.f,function(x){start(x) - gRNA.size - 1})    #position of all the starting nucleotide of each gRNA
+  ends.gRNA   <- lapply(pos.PAMs.f,function(x){start(x) - 2}) #position of the end of each gRNAs
+  gRNAs.ext.f   <- c()
+  for (i in 1:length(regions)){
+    allgRNAs <- Views(regions[[i]], ##retrieve the sequence between each start and end which corresponds to the 20 gRNA sequences 
+                      start = starts.gRNA[[names(regions)[i]]] ,
+                      end   = ends.gRNA[[names(regions)[i]]] + PAM.size)
+    region.length <- length(subject(allgRNAs))
+    allgRNAs.f    <- allgRNAs[!(start(allgRNAs)==0|end(allgRNAs)>region.length)] #gRNAs is fully contained in region
+    gRNAs.ext.f   <- c(gRNAs.ext.f,as.character(allgRNAs.f))
   }
+  
+  #Reverse strand
+  PAM.c <- DNAString("CC") #Protospacer Adjacent Motif 3 nucleotides
+  
+  #Search position of PAM in each complement region
+  pos.PAMs.c <- vmatchPattern(PAM.c,r,
+                            algorithm="auto",max.mismatch=0,
+                            with.indels=FALSE, fixed=TRUE)
+  
+  #Define gRNAs region
+  starts.gRNA <- lapply(pos.PAMs.c,function(x){end(x) + 2})    #position of all the starting nucleotide of each gRNA
+  ends.gRNA   <- lapply(pos.PAMs.c,function(x){end(x) + gRNA.size + 1}) #position of the end of each gRNAs
+  gRNAs.ext.c   <- c()
+  for (i in 1:length(regions)){
+    allgRNAs <- Views(regions[[i]], ##retrieve the sequence between each start and end which corresponds to the 20 gRNA sequences 
+                      start = starts.gRNA[[names(regions)[i]]] - PAM.size,
+                      end   = ends.gRNA[[names(regions)[i]]])
+    region.length <- length(subject(allgRNAs))
+    allgRNAs.f    <- allgRNAs[!(start(allgRNAs)==0|end(allgRNAs)>region.length)] #gRNAs is fully contained in region
+    gRNAs.ext.c   <- c(gRNAs.ext.c,as.character(allgRNAs.f))
+  }
+  gRNAs.ext.c <- as.character(reverseComplement(DNAStringSet(gRNAs.ext.c)))
+  gRNAs.ext   <- c(gRNAs.ext.f,gRNAs.ext.c)
   
   ## Filter bad quality gRNA 
   GCcont <- sapply(gRNAs.ext,function(x){

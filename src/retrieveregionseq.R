@@ -97,7 +97,11 @@ retrieveregionseq <- function(genome="sacCer3",
   
   #Return
   regions   <- regions.all[filter]
-  genes     <- ifelse(region!="chromosome",sgd.genes[filter],names(regions)) #Use chr names if region="chromosome"
+  if (region!="chromosome"){#Use chr names if region="chromosome"
+    genes <- sgd.genes[filter]
+  } else {
+    genes <- names(regions)
+  }
   res       <- list(regions=regions,genes=genes)
   if (!is.null(filename)) save(list = c("res"),file = filename)
   res
