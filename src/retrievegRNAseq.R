@@ -82,6 +82,13 @@ retrievegRNAseq <- function(regions=NULL,genes=NULL,regfile=NULL,
   message(sum(GCcont<=minGC)," gRNAs have GC content <= ",minGC,". Discarded.")
   gRNAs.ext <- gRNAs.ext[GCcont>minGC]
   
+  ## Filter A/T/C/G content 
+  gRNAs.ext.alpha  <- alphabetFrequency(DNAStringSet(gRNAs.ext))
+  gRNAs.ext.noATCG <- gRNAs.ext.alpha[,-which(colnames(gRNAs.ext.alpha)%in%c("A","C","T","G"))]
+  ATCG.filter      <- apply(gRNAs.ext.noATCG==0,1,all)
+  message(sum(!ATCG.filter)," gRNAs have at least one nucleotide different from ATCG. Discarded.")
+  gRNAs.ext <- gRNAs.ext[ATCG.filter]
+  
   #Return
   if (!is.null(filename)) save(list = c("gRNAs.ext"),file = filename)
   gRNAs.ext  
