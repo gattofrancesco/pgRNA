@@ -88,8 +88,11 @@ analyzealignments <- function(hitsindexes,region,nmismatches,regions=NULL,genes=
         posiz <- as.matrix(posiz)
         best.tab[gRNA,1:length(posiz)] <- genes[posiz]
       } else {
-        posiz  <- sum(nhitsxregion)
+        posiz    <- sum(nhitsxregion)
+        chrnames <- c()
+        for (n in names(scores)){chrnames <- c(chrnames,rep(n,length(scores[[n]])))}
         starts <- unlist(lapply(scores,start))
+        names(starts) <- chrnames#Remove
         values <- c()
         for (i in 1:length(starts)){
           v<-paste(names(starts[i]),starts[i],sep = ":")
